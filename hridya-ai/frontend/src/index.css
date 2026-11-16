@@ -1,0 +1,147 @@
+/* ==========================================================================
+   HRIDAYA (हृदय) - AI MENTAL WELLNESS & THERAPIST ACCESSIBILITY
+   Theme: Olive Green & Warm Peach System (Warm, Organic, Human, Accessible)
+   Palette:
+     Olive Green: #737D45
+     Deep Olive:  #465132
+     Warm Peach:  #F4C6A6
+     Soft Peach:  #FBE7DA
+     Warm Ivory:  #FFF9F3
+     Dark Text:   #292D24
+   ========================================================================== */
+
+:root {
+  /* Primary Hridaya Palette */
+  --olive-primary: #737D45;
+  --olive-dark: #465132;
+  --olive-light: #8E9A5B;
+  --olive-subtle: #EBF0D8;
+  --olive-hover: #616B38;
+
+  --peach-warm: #F4C6A6;
+  --peach-soft: #FBE7DA;
+  --peach-light: #FDF3EC;
+  --peach-hover: #EBB591;
+  --peach-border: #ECD0BF;
+
+  --ivory-warm: #FFF9F3;
+  --ivory-surface: #FAF4ED;
+  --white: #FFFFFF;
+
+  --text-dark: #292D24;
+  --text-muted: #5E6554;
+  --text-subtle: #878E7C;
+  --text-on-olive: #FFFFFF;
+
+  /* Functional Status (Solid, Accessible) */
+  --status-safe: #4C7A34;
+  --status-safe-bg: #EBF5E5;
+  --status-safe-border: #C6E4BA;
+
+  --status-warn: #B86B1B;
+  --status-warn-bg: #FEF4E8;
+  --status-warn-border: #FCD8B1;
+
+  --status-urgent: #B33924;
+  --status-urgent-bg: #FDEEED;
+  --status-urgent-border: #F8BFBA;
+
+  /* Typography */
+  --font-hindi: 'Noto Sans Devanagari', 'Rozha One', serif;
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+
+  /* Border Radii (Human, Organic, Not overly rounded) */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 9999px;
+
+  /* Organic Clean Shadows (Zero excessive glassmorphism) */
+  --shadow-subtle: 0 1px 3px rgba(41, 45, 36, 0.05);
+  --shadow-card: 0 4px 16px rgba(41, 45, 36, 0.06);
+  --shadow-lift: 0 8px 24px rgba(41, 45, 36, 0.09);
+  --shadow-modal: 0 20px 48px rgba(41, 45, 36, 0.16);
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+}
+
+/* Base Reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+  background-color: var(--ivory-warm);
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--ivory-warm);
+  color: var(--text-dark);
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Typography Base */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  color: var(--text-dark);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.brand-hindi {
+  font-family: var(--font-hindi);
+}
+
+p {
+  color: var(--text-muted);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: var(--font-sans);
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+/* Accessibility Focus Ring */
+:focus-visible {
+  outline: 2px solid var(--olive-primary);
+  outline-offset: 3px;
+}
+
+/* Skip link */
+.skip-link {
+  position: absolute;
+  top: -60px;
+  left: 20px;
+  background-color: var(--olive-dark);
+  color: var(--white);
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  z-index: 9999;
+  transition: top var(--transition-fast);
+}
+
+.skip-link:focus {
+  top: 16px;
+}
