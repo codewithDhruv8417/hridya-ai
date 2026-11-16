@@ -10,6 +10,8 @@ import {
 export default function ScreeningResult({
   totalScore,
   maxScore = 15,
+  apiResult = null,
+  apiError = null,
   onRestart,
   onNavigateToAssistant,
   onNavigateToTherapists
@@ -101,6 +103,80 @@ export default function ScreeningResult({
               </div>
             </div>
           </div>
+
+          {/* ------------------------------------------------------------- */}
+          {/* AI RESULT FROM THE FASTAPI BACKEND (XGBoost + MedGemma)       */}
+          {/* ------------------------------------------------------------- */}
+          {apiResult && (
+            <div className={`ai-summary-card ai-risk-${apiResult.risk_level}`}>
+              <div className="ai-summary-head">
+                <div>
+                  <span className="ai-summary-eyebrow">AI CLINICAL SCREENING SUMMARY</span>
+                  <h3 className="ai-summary-title">
+                    {apiResult.scores.predicted_category}
+                  </h3>
+                </div>
+                <span className={`ai-risk-pill ai-risk-pill-${apiResult.risk_level}`}>
+                  {apiResult.risk_level} risk
+                </span>
+              </div>
+
+              <div className="ai-summary-metrics">
+                <span>
+                  Model confidence <strong>{Math.round(apiResult.scores.confidence * 100)}%</strong>
+                </span>
+                {apiResult.questionnaire && (
+                  <span>
+                    Screener total{' '}
+                    <strong>
+                      {apiResult.questionnaire.total}/{apiResult.questionnaire.max_score}
+                    </strong>
+                  </span>
+                )}
+                <span>
+                  Explanation by <strong>{apiResult.explanation_source === 'medgemma' ? 'MedGemma' : 'local explainer'}</strong>
+                </span>
+              </div>
+
+              <p className="ai-summary-explanation">{apiResult.explanation}</p>
+
+              {apiResult.drivers?.length > 0 && (
+                <div className="ai-driver-list">
+                  <span className="ai-driver-label">Signals that moved your score</span>
+                  <div className="ai-driver-chips">
+                    {apiResult.drivers.slice(0, 4).map((driver) => (
+                      <span key={driver.feature} className={`ai-driver-chip driver-${driver.direction}`}>
+                        {driver.label}: {String(driver.value)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {apiResult.safety?.crisis_resources?.length > 0 && (
+                <div className="ai-crisis-box">
+                  <strong>Please reach out today:</strong>
+                  <ul>
+                    {apiResult.safety.crisis_resources.map((resource) => (
+                      <li key={resource}>{resource}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <p className="ai-summary-disclaimer">{apiResult.disclaimer}</p>
+            </div>
+          )}
+
+          {apiError && (
+            <div className="ai-summary-card ai-summary-offline">
+              <strong>AI screening summary unavailable.</strong>
+              <p>
+                {apiError} The wellness score above is calculated in the browser and is still valid
+                as a self-check.
+              </p>
+            </div>
+          )}
 
           {/* ------------------------------------------------------------- */}
           {/* RESULT STATE 1: SELF-CARE AND WELLNESS RESOURCES SUGGESTED   */}

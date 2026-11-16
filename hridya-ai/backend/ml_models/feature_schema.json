@@ -1,0 +1,218 @@
+{
+  "$comment": [
+    "Feature contract for hridya_screening_model.joblib.",
+    "The model was trained on a pandas DataFrame, so XGBoost stored the exact 17",
+    "column names and their order. `model_name` below must match those names",
+    "character for character. `api_name` is the snake_case name the REST API uses.",
+    "Numeric features are passed through unchanged; categorical features are",
+    "LabelEncoded with the categories sorted alphabetically, which is exactly what",
+    "sklearn's LabelEncoder does. If ml_models/hridya_encoders.joblib exists (it is",
+    "written by ml/src/train.py), those exact training encoders are used instead."
+  ],
+  "model": {
+    "name": "Hridya-Screening",
+    "version": "v1.2.0",
+    "algorithm": "XGBClassifier (multi:softprob, 100 trees, depth 5)",
+    "accuracy": 91.95
+  },
+  "class_labels": {
+    "0": "No significant depression indicators",
+    "1": "Mild depression indicators",
+    "2": "Moderate depression indicators",
+    "3": "Severe depression indicators"
+  },
+  "risk_thresholds": {
+    "moderate": 0.35,
+    "high": 0.65
+  },
+  "encoding_note": "Category codes are alphabetical indexes within the category list below. The training script did not persist its LabelEncoders, so codes for free-text identity fields (City, Profession, Degree) are a best-effort reconstruction and only those low-importance fields are approximated. Run ml/src/train.py to emit hridya_encoders.joblib for exact parity.",
+  "features": [
+    {
+      "api_name": "family_history",
+      "model_name": "Family History of Mental Illness",
+      "label": "Family history of mental illness",
+      "kind": "category",
+      "categories": ["No", "Yes"],
+      "default": "No",
+      "description": "Whether a close family member has a diagnosed mental illness."
+    },
+    {
+      "api_name": "work_study_hours",
+      "model_name": "Work/Study Hours",
+      "label": "Daily work or study hours",
+      "kind": "number",
+      "default": 8,
+      "min": 0,
+      "max": 24,
+      "description": "Hours per day spent working or studying."
+    },
+    {
+      "api_name": "academic_pressure",
+      "model_name": "Academic Pressure",
+      "label": "Academic pressure",
+      "kind": "number",
+      "default": 2,
+      "min": 0,
+      "max": 5,
+      "description": "Self-reported academic pressure, 0 (none) to 5 (extreme)."
+    },
+    {
+      "api_name": "dietary_habits",
+      "model_name": "Dietary Habits",
+      "label": "Dietary habits",
+      "kind": "category",
+      "categories": ["Healthy", "Moderate", "Unhealthy"],
+      "default": "Moderate",
+      "description": "Self-reported quality of diet."
+    },
+    {
+      "api_name": "work_pressure",
+      "model_name": "Work Pressure",
+      "label": "Work pressure",
+      "kind": "number",
+      "default": 0,
+      "min": 0,
+      "max": 5,
+      "description": "Self-reported workplace pressure, 0 (none) to 5 (extreme)."
+    },
+    {
+      "api_name": "sleep_duration",
+      "model_name": "Sleep Duration",
+      "label": "Sleep duration",
+      "kind": "category",
+      "categories": ["5-6 hours", "7-8 hours", "Less than 5 hours", "More than 8 hours", "Others"],
+      "default": "7-8 hours",
+      "description": "Typical nightly sleep band."
+    },
+    {
+      "api_name": "financial_stress",
+      "model_name": "Financial Stress",
+      "label": "Financial stress",
+      "kind": "number",
+      "default": 2,
+      "min": 0,
+      "max": 10,
+      "description": "Self-reported financial stress, 0 (none) to 10 (extreme)."
+    },
+    {
+      "api_name": "study_satisfaction",
+      "model_name": "Study Satisfaction",
+      "label": "Study satisfaction",
+      "kind": "number",
+      "default": 3.5,
+      "min": 0,
+      "max": 5,
+      "description": "Satisfaction with studies, 0 (none) to 5 (very high)."
+    },
+    {
+      "api_name": "cgpa",
+      "model_name": "CGPA",
+      "label": "Academic score (CGPA)",
+      "kind": "number",
+      "default": 7.5,
+      "min": 0,
+      "max": 10,
+      "description": "Cumulative grade point average on a 10-point scale."
+    },
+    {
+      "api_name": "job_satisfaction",
+      "model_name": "Job Satisfaction",
+      "label": "Job satisfaction",
+      "kind": "number",
+      "default": 3.5,
+      "min": 0,
+      "max": 5,
+      "description": "Satisfaction with work, 0 (none) to 5 (very high)."
+    },
+    {
+      "api_name": "gender",
+      "model_name": "Gender",
+      "label": "Gender",
+      "kind": "category",
+      "categories": ["Female", "Male", "Other"],
+      "default": "Female",
+      "description": "Self-reported gender."
+    },
+    {
+      "api_name": "working_status",
+      "model_name": "Working Professional or Student",
+      "label": "Working status",
+      "kind": "category",
+      "categories": ["Student", "Working Professional"],
+      "default": "Student",
+      "description": "Whether the person studies or works."
+    },
+    {
+      "api_name": "age",
+      "model_name": "Age",
+      "label": "Age",
+      "kind": "number",
+      "default": 22,
+      "min": 10,
+      "max": 100,
+      "description": "Age in years."
+    },
+    {
+      "api_name": "city",
+      "model_name": "City",
+      "label": "City",
+      "kind": "category",
+      "categories": [
+        "Agra", "Ahmedabad", "Aizawl", "Ajmer", "Aligarh", "Allahabad", "Amritsar", "Aurangabad",
+        "Bangalore", "Bareilly", "Belgaum", "Bengaluru", "Bhopal", "Bhubaneswar", "Bikaner",
+        "Chandigarh", "Chennai", "Coimbatore", "Cuttack", "Dehradun", "Delhi", "Dhanbad",
+        "Durgapur", "Faridabad", "Gaya", "Ghaziabad", "Gorakhpur", "Gurgaon", "Guwahati",
+        "Gwalior", "Howrah", "Hubli", "Hyderabad", "Indore", "Jabalpur", "Jaipur", "Jalandhar",
+        "Jammu", "Jamnagar", "Jamshedpur", "Jhansi", "Jodhpur", "Kalyan", "Kanpur", "Kochi",
+        "Kolhapur", "Kolkata", "Kota", "Kozhikode", "Lucknow", "Ludhiana", "Madurai",
+        "Mangalore", "Meerut", "Mumbai", "Mysore", "Nagpur", "Nashik", "Navi Mumbai", "Noida",
+        "Patna", "Pune", "Raipur", "Rajkot", "Ranchi", "Rourkela", "Salem", "Sangli", "Siliguri",
+        "Solapur", "Srinagar", "Surat", "Thane", "Thiruvananthapuram", "Tiruchirappalli",
+        "Udaipur", "Ujjain", "Vadodara", "Varanasi", "Vasai-Virar", "Vijayawada",
+        "Visakhapatnam", "Warangal"
+      ],
+      "default": "Mumbai",
+      "description": "City of residence. Low model importance; used for cohort analytics."
+    },
+    {
+      "api_name": "profession",
+      "model_name": "Profession",
+      "label": "Profession",
+      "kind": "category",
+      "categories": [
+        "Architect", "Business Analyst", "Chemist", "Civil Engineer", "Consultant",
+        "Content Writer", "Customer Support", "Data Scientist", "Doctor",
+        "Educational Consultant", "Electrician", "Engineer", "Entrepreneur",
+        "Financial Analyst", "Freelancer", "Government Officer", "Graphic Designer",
+        "HR Manager", "Housewife", "Lawyer", "Manager", "Marketing Manager",
+        "Mechanical Engineer", "Nurse", "Others", "Pharmacist", "Professor", "Psychologist",
+        "Research Analyst", "Sales Executive", "School Teacher", "Software Engineer",
+        "Student", "Teacher", "UX/UI Designer"
+      ],
+      "default": "Student",
+      "description": "Occupation. Low model importance."
+    },
+    {
+      "api_name": "suicidal_thoughts",
+      "model_name": "Have you ever had suicidal thoughts ?",
+      "label": "History of suicidal thoughts",
+      "kind": "category",
+      "categories": ["No", "Yes"],
+      "default": "No",
+      "description": "Direct safety question. Drives a large part of the model output and triggers the crisis-resource safety rule."
+    },
+    {
+      "api_name": "degree",
+      "model_name": "Degree",
+      "label": "Degree",
+      "kind": "category",
+      "categories": [
+        "B.Arch", "B.Com", "B.Ed", "B.Pharm", "B.Tech", "BA", "BBA", "BCA", "BHM", "BSc",
+        "LLB", "LLM", "M.Com", "M.Ed", "M.Pharm", "M.Tech", "MA", "MBA", "MBBS", "MCA",
+        "MD", "ME", "MPhil", "MSc", "Others", "PhD"
+      ],
+      "default": "B.Tech",
+      "description": "Highest degree. Low model importance."
+    }
+  ]
+}

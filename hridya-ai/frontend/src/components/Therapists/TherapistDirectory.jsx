@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { api } from '../../services/api';
 import { 
   CheckIcon, 
   StarIcon, 
@@ -7,6 +8,51 @@ import {
   ArrowRightIcon 
 } from '../Icons';
 
+// The directory renders instantly from this data, then upgrades to the live
+// FastAPI list when the backend answers (see the effect below).
+const categoryFor = (specializations = []) => {
+  const joined = specializations.join(' ').toLowerCase();
+  if (/anxiety|stress|burnout/.test(joined)) return 'student';
+  if (/depress|sleep|mood/.test(joined)) return 'mood';
+  if (/trauma|relationship|grief/.test(joined)) return 'relationships';
+  return 'student';
+};
+
+const initialsOf = (fullName = '') =>
+  fullName
+    .replace(/^Dr\.?\s+/i, '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join('')
+    .toUpperCase();
+
+const toCard = (therapist) => ({
+  id: therapist.therapist_id,
+  name: therapist.full_name,
+  credentials: therapist.qualification || 'Licensed practitioner',
+  roleTitle: therapist.specializations?.[0]
+    ? `${therapist.specializations[0]} specialist`
+    : 'Mental health professional',
+  experience: `${therapist.experience_years}+ Years Experience`,
+  rating: '4.9',
+  reviewCount: 'Verified practitioner',
+  category: categoryFor(therapist.specializations),
+  languages: ['English', 'हिन्दी (Hindi)'],
+  specialties: therapist.specializations?.length ? therapist.specializations : ['General Wellness'],
+  formats:
+    therapist.session_mode === 'offline'
+      ? ['In-person Session']
+      : therapist.session_mode === 'both'
+        ? ['Secure Video Call', 'In-person Session']
+        : ['Secure Video Call'],
+  fee: therapist.consultation_fee ? `₹${therapist.consultation_fee} / session` : 'Fee on request',
+  studentOffer: 'Sliding-scale support available',
+  initials: initialsOf(therapist.full_name),
+  nextSlot: 'Available this week'
+});
+
 export default function TherapistDirectory() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [bookingTherapist, setBookingTherapist] = useState(null);
@@ -14,7 +60,7 @@ export default function TherapistDirectory() {
   const [consentIntake, setConsentIntake] = useState(true);
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
 
-  const therapists = [
+  const fallbackTherapists = [
     {
       id: 1,
       name: 'डॉ. अनन्या शर्मा (Dr. Ananya Sharma)',
@@ -67,6 +113,24 @@ export default function TherapistDirectory() {
       nextSlot: 'Available Thursday, 2:00 PM'
     }
   ];
+
+  const [therapists, setTherapists] = useState(fallbackTherapists);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .therapists()
+      .then((data) => {
+        if (cancelled || !data?.therapists?.length) return;
+        setTherapists(data.therapists.map(toCard));
+      })
+      .catch(() => {
+        // Backend offline: the built-in directory stays on screen.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filtered = activeFilter === 'all'
     ? therapists

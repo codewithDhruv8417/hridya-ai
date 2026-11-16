@@ -1,0 +1,31 @@
+# --- Python ---------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# --- Local database + secrets --------------------------------------------
+*.sqlite3
+*.db
+.env
+!.env.example
+
+# --- Node -----------------------------------------------------------------
+node_modules/
+dist/
+dist-ssr/
+
+# --- ML artefacts that should be fetched/retrained, keep the model itself --
+ml/datasets/
+*.ipynb_checkpoints/
+
+# --- OS / editors ---------------------------------------------------------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Runtime logs
+*.log

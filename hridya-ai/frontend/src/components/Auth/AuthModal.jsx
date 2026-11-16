@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { api } from '../../services/api';
 import { 
   CloseIcon, 
   UserIcon, 
@@ -15,7 +16,11 @@ export default function AuthModal({ isOpen, onClose, initialView = 'choice', onL
   const [role, setRole] = useState('patient'); // 'patient' | 'therapist'
   
   // Form states
+  // mobileNumber doubles as the login identifier, which the API accepts as an
+  // email address or a phone number.
   const [mobileNumber, setMobileNumber] = useState('');
+  const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -43,47 +48,84 @@ export default function AuthModal({ isOpen, onClose, initialView = 'choice', onL
     }
   };
 
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
     if (!mobileNumber || !password) {
-      setFeedback({ type: 'error', message: 'कृपया मोबाइल नंबर और पासवर्ड दर्ज करें।' });
+      setFeedback({ type: 'error', message: 'कृपया ईमेल/मोबाइल नंबर और पासवर्ड दर्ज करें।' });
       return;
     }
-    // Mock successful login
-    const user = {
-      name: role === 'therapist' ? 'डॉ. अनन्या शर्मा' : 'अदिति वर्मा',
-      mobile: mobileNumber,
-      role: role
-    };
-    setFeedback({ type: 'success', message: 'लॉगिन सफल रहा! Welcome back to Hridaya.' });
-    setTimeout(() => {
-      onLoginSuccess(user);
-      onClose();
-    }, 600);
+
+    setIsSubmitting(true);
+    try {
+      const data = await api.login(mobileNumber.trim(), password);
+      api.setToken(data.access_token);
+      setFeedback({ type: 'success', message: 'लॉगिन सफल रहा! Welcome back to Hridaya.' });
+      setTimeout(() => {
+        onLoginSuccess({
+          name: data.user.full_name,
+          email: data.user.email,
+          role: data.user.role === 'therapist' ? 'therapist' : 'patient'
+        });
+        onClose();
+      }, 500);
+    } catch (error) {
+      setFeedback({ type: 'error', message: error.message });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleRegisterSubmit = (e) => {
+  const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-    if (!fullName || !mobileNumber || !password || !confirmPassword) {
-      setFeedback({ type: 'error', message: 'Please fill in all required fields.' });
+    if (!fullName || !email || !password || !confirmPassword) {
+      setFeedback({ type: 'error', message: 'Please fill in your name, email and password.' });
       return;
     }
     if (password !== confirmPassword) {
       setFeedback({ type: 'error', message: 'Passwords do not match.' });
       return;
     }
-    // Mock successful registration
-    const user = {
-      name: fullName,
-      mobile: mobileNumber,
-      role: role,
-      license: role === 'therapist' ? licenseNumber : null
+    if (role === 'therapist' && !licenseNumber) {
+      setFeedback({ type: 'error', message: 'A clinical licence number is required for therapist accounts.' });
+      return;
+    }
+
+    const payload = {
+      full_name: fullName.trim(),
+      email: email.trim(),
+      password,
+      phone: mobileNumber.trim() || null,
+      role: role === 'therapist' ? 'therapist' : 'user'
     };
-    setFeedback({ type: 'success', message: 'Account created successfully! Welcome to Hridaya.' });
-    setTimeout(() => {
-      onLoginSuccess(user);
-      onClose();
-    }, 600);
+
+    setIsSubmitting(true);
+    try {
+      if (role === 'therapist') {
+        payload.license_number = licenseNumber.trim();
+        payload.qualification = 'Pending verification';
+      }
+      const data = await api.register(payload);
+      api.setToken(data.access_token);
+      setFeedback({
+        type: 'success',
+        message:
+          role === 'therapist'
+            ? 'Account created. Your licence is pending admin verification.'
+            : 'Account created successfully! Welcome to Hridaya.'
+      });
+      setTimeout(() => {
+        onLoginSuccess({
+          name: data.user.full_name,
+          email: data.user.email,
+          role: data.user.role === 'therapist' ? 'therapist' : 'patient'
+        });
+        onClose();
+      }, 600);
+    } catch (error) {
+      setFeedback({ type: 'error', message: error.message });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleForgotSubmit = (e) => {
@@ -223,11 +265,11 @@ export default function AuthModal({ isOpen, onClose, initialView = 'choice', onL
 
             <form onSubmit={handleLoginSubmit} className="auth-form">
               <div className="form-group">
-                <label htmlFor="patient-mobile" className="form-label">Mobile Number</label>
+                <label htmlFor="patient-mobile" className="form-label">Email or Mobile Number</label>
                 <input
                   id="patient-mobile"
-                  type="tel"
-                  placeholder="e.g. 9876543210"
+                  type="text"
+                  placeholder="e.g. aditi@hridya.ai"
                   value={mobileNumber}
                   onChange={(e) => setMobileNumber(e.target.value)}
                   className="form-input"
@@ -307,11 +349,11 @@ export default function AuthModal({ isOpen, onClose, initialView = 'choice', onL
 
             <form onSubmit={handleLoginSubmit} className="auth-form">
               <div className="form-group">
-                <label htmlFor="therapist-mobile" className="form-label">Registered Mobile Number</label>
+                <label htmlFor="therapist-mobile" className="form-label">Registered Email or Mobile</label>
                 <input
                   id="therapist-mobile"
-                  type="tel"
-                  placeholder="e.g. 9876543210"
+                  type="text"
+                  placeholder="e.g. ananya@hridya.ai"
                   value={mobileNumber}
                   onChange={(e) => setMobileNumber(e.target.value)}
                   className="form-input"
@@ -423,7 +465,20 @@ export default function AuthModal({ isOpen, onClose, initialView = 'choice', onL
               </div>
 
               <div className="form-group">
-                <label htmlFor="reg-mobile" className="form-label">Mobile Number</label>
+                <label htmlFor="reg-email" className="form-label">Email Address</label>
+                <input
+                  id="reg-email"
+                  type="email"
+                  placeholder="e.g. aditi@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="form-input"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="reg-mobile" className="form-label">Mobile Number (optional)</label>
                 <input
                   id="reg-mobile"
                   type="tel"

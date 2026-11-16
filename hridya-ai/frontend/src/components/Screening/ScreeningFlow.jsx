@@ -1,11 +1,16 @@
 import { useState } from 'react';
 import ScreeningResult from './ScreeningResult';
 import { ArrowLeftIcon, ShieldCheckIcon } from '../Icons';
+import { api } from '../../services/api';
 
 export default function ScreeningFlow({ onNavigateToAssistant, onNavigateToTherapists }) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [isCompleted, setIsCompleted] = useState(false);
+  // Result returned by the FastAPI backend (XGBoost + MedGemma explanation).
+  const [apiResult, setApiResult] = useState(null);
+  const [apiError, setApiError] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 5 standardized, sensitive screening questions (PHQ-9 & GAD-7 grounded)
   const questions = [
@@ -74,7 +79,7 @@ export default function ScreeningFlow({ onNavigateToAssistant, onNavigateToThera
   const currentQ = questions[currentQuestionIndex];
   const selectedAnswer = answers[currentQ.id];
 
-  const handleSelectOption = (score) => {
+  const handleSelectOption = async (score) => {
     const updated = { ...answers, [currentQ.id]: score };
     setAnswers(updated);
 
@@ -82,10 +87,35 @@ export default function ScreeningFlow({ onNavigateToAssistant, onNavigateToThera
       setTimeout(() => {
         setCurrentQuestionIndex(prev => prev + 1);
       }, 250);
-    } else {
-      setTimeout(() => {
-        setIsCompleted(true);
-      }, 350);
+      return;
+    }
+
+    // Last question: send all five answers to the backend and show the ML result.
+    setIsSubmitting(true);
+    const payload = {
+      answers: questions.map((q) => {
+        const value = q.id === currentQ.id ? score : updated[q.id] ?? 0;
+        const option = q.options.find((o) => o.score === value);
+        return {
+          question_id: q.id,
+          answer_text: option ? option.labelEn : 'Not at all',
+          answer_score: value,
+        };
+      }),
+      language: 'English',
+    };
+
+    try {
+      const result = await api.submitScreening(payload);
+      setApiResult(result);
+      setApiError(null);
+    } catch (error) {
+      // The local score-based result still renders, so the user is never stuck.
+      setApiResult(null);
+      setApiError(error.message);
+    } finally {
+      setIsSubmitting(false);
+      setIsCompleted(true);
     }
   };
 
@@ -99,6 +129,8 @@ export default function ScreeningFlow({ onNavigateToAssistant, onNavigateToThera
     setAnswers({});
     setCurrentQuestionIndex(0);
     setIsCompleted(false);
+    setApiResult(null);
+    setApiError(null);
   };
 
   // If completed, show Result view
@@ -109,6 +141,8 @@ export default function ScreeningFlow({ onNavigateToAssistant, onNavigateToThera
       <ScreeningResult
         totalScore={totalScore}
         maxScore={questions.length * 3}
+        apiResult={apiResult}
+        apiError={apiError}
         onRestart={handleRestart}
         onNavigateToAssistant={onNavigateToAssistant}
         onNavigateToTherapists={onNavigateToTherapists}
@@ -185,7 +219,7 @@ export default function ScreeningFlow({ onNavigateToAssistant, onNavigateToThera
 
             <span className="confidential-seal-text">
               <ShieldCheckIcon size={14} />
-              Responses are completely private
+              {isSubmitting ? 'Scoring your responses…' : 'Responses are completely private'}
             </span>
           </div>
 

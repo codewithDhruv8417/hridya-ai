@@ -22,9 +22,11 @@ df_encoded = df.copy()
 if "Name" in df_encoded.columns:
     df_encoded.drop(columns=["Name"], inplace=True)  # Drop unique name identifiers
 
+cat_encoders = {}
 for col in df_encoded.select_dtypes(include=["object"]).columns:
     le = LabelEncoder()
     df_encoded[col] = le.fit_transform(df_encoded[col].astype(str))
+    cat_encoders[col] = le  # keep it: the API must encode new input the same way
 
 # 3. Define Features (X) and Target (y)
 target_column = "Depression" if "Depression" in df_encoded.columns else df_encoded.columns[-1]
@@ -32,9 +34,10 @@ X = df_encoded.drop(columns=[target_column])
 y = df_encoded[target_column]
 
 # If the target label column is text-based (e.g., 'Yes'/'No'), encode it to numeric
+target_encoder = None
 if y.dtype == 'object':
-    le_y = LabelEncoder()
-    y = le_y.fit_transform(y.astype(str))
+    target_encoder = LabelEncoder()
+    y = target_encoder.fit_transform(y.astype(str))
 
 print(f"Features shape (X): {X.shape}, Target shape (y): {y.shape}")
 
@@ -82,3 +85,19 @@ model_path = "ml/models/hridya_screening_model.joblib"
 joblib.dump(best_model, model_path)
 
 print(f"\n💾 Saved Best Model ({best_model.__class__.__name__}) to '{model_path}'!")
+
+# 8. Save the encoders alongside the model.
+# The FastAPI backend loads this bundle so a category typed by a user becomes
+# the exact integer code the model was trained on. Without it, codes have to be
+# re-derived and predictions drift for the categorical columns.
+encoder_path = "ml/models/hridya_encoders.joblib"
+joblib.dump(
+    {
+        "encoders": cat_encoders,
+        "feature_order": list(X.columns),
+        "classes": [int(c) for c in best_model.classes_],
+        "target_encoder": target_encoder,
+    },
+    encoder_path,
+)
+print(f"🔐 Saved feature encoders to '{encoder_path}' - copy it to backend/ml_models/ too.")

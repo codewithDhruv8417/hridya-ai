@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import Avatar3D from './Avatar3D';
+import { api } from '../../services/api';
 import { 
   MicIcon, 
   MicOffIcon, 
@@ -24,6 +25,8 @@ export default function AssistantChat({ onNavigateToScreening, onNavigateToThera
   const synthRef = useRef(window.speechSynthesis || null);
   const messagesEndRef = useRef(null);
   const msgIdCounter = useRef(10);
+  // Backend chat session id, created lazily on the first message.
+  const chatSessionRef = useRef(null);
 
   // Supported languages list
   const languages = [
@@ -186,12 +189,31 @@ export default function AssistantChat({ onNavigateToScreening, onNavigateToThera
     }
   };
 
-  // Process user message and formulate empathetic clinical response
-  const handleSendMessage = (textToSend = null) => {
+  // Offline / signed-out replies. Used when the API is unreachable so the
+  // companion still responds instead of going silent.
+  const localReply = (text) => {
+    const isHindi = selectedLanguage === 'hi';
+    const lower = text.toLowerCase();
+    if (lower.includes('neend') || lower.includes('sleep') || lower.includes('नींद')) {
+      return isHindi
+        ? 'नींद की कमी मन और मस्तिष्क को और अधिक थका देती है। क्या आप 4-7-8 शांत सांस लेने की तकनीक आजमाना चाहेंगे, या हम एक छोटा तनाव मूल्यांकन करें?'
+        : 'Disrupted sleep directly amplifies emotional fatigue. Would you like to try a calming 4-7-8 breathing exercise together, or conduct a brief stress screening?';
+    }
+    if (lower.includes('exam') || lower.includes('pariksha') || lower.includes('परीक्षा') || lower.includes('future') || lower.includes('चिंता')) {
+      return isHindi
+        ? 'परीक्षा और भविष्य को लेकर दबाव महसूस होना स्वाभाविक है। अपनी भावनाओं को शब्दों में ढालना ही सुधार का पहला कदम है। आप हमारे 2-मिनट के कल्याण मूल्यांकन से भी अपने तनाव का स्तर समझ सकते हैं।'
+        : 'Academic and future pressures are heavy to carry alone. You have taken a courageous step by expressing this. A 2-minute screening can help clarify your stress profile.';
+    }
+    return isHindi
+      ? 'मैं आपकी बात पूरी संवेदनशीलता से सुन रही हूँ। आपका मन जो महसूस कर रहा है, वह बहुत महत्वपूर्ण है। क्या आप चाहते हैं कि हम आपके कल्याण स्तर की जांच करें ताकि सही मार्गदर्शन मिल सके?'
+      : 'I hear you with complete empathy. Your emotions are valid and deserve care. Would you like us to proceed with a 2-minute clinical screening to help chart your next steps?';
+  };
+
+  // Process user message through the FastAPI + Gemini endpoint.
+  const handleSendMessage = async (textToSend = null) => {
     const text = (typeof textToSend === 'string' ? textToSend : inputText).trim();
     if (!text) return;
 
-    // Append user message
     msgIdCounter.current += 1;
     const userMsg = {
       id: msgIdCounter.current,
@@ -204,37 +226,35 @@ export default function AssistantChat({ onNavigateToScreening, onNavigateToThera
     setInputText('');
     setAvatarState('thinking');
 
-    // Simulate AI response formulated by empathetic assistant
-    setTimeout(() => {
-      let replyText;
-      const isHindi = selectedLanguage === 'hi';
+    const languageNames = { hi: 'Hindi', en: 'English', bn: 'Bengali', mr: 'Marathi', ta: 'Tamil' };
+    let replyText;
 
-      const lower = text.toLowerCase();
-      if (lower.includes('neend') || lower.includes('sleep') || lower.includes('नींद')) {
-        replyText = isHindi
-          ? 'नींद की कमी मन और मस्तिष्क को और अधिक थका देती है। क्या आप 4-7-8 शांत सांस लेने की तकनीक आजमाना चाहेंगे, या हम एक छोटा तनाव मूल्यांकन करें?'
-          : 'Disrupted sleep directly amplifies emotional fatigue. Would you like to try a calming 4-7-8 breathing exercise together, or conduct a brief stress screening?';
-      } else if (lower.includes('exam') || lower.includes('pariksha') || lower.includes('परीक्षा') || lower.includes('future') || lower.includes('चिंता')) {
-        replyText = isHindi
-          ? 'परीक्षा और भविष्य को लेकर दबाव महसूस होना स्वाभाविक है। अपनी भावनाओं को शब्दों में ढालना ही सुधार का पहला कदम है। आप हमारे 2-मिनट के कल्याण मूल्यांकन से भी अपने तनाव का स्तर समझ सकते हैं।'
-          : 'Academic and future pressures are heavy to carry alone. You have taken a courageous step by expressing this. A 2-minute screening can help clarify your stress profile.';
-      } else {
-        replyText = isHindi
-          ? 'मैं आपकी बात पूरी संवेदनशीलता से सुन रही हूँ। आपका मन जो महसूस कर रहा है, वह बहुत महत्वपूर्ण है। क्या आप चाहते हैं कि हम आपके कल्याण स्तर की जांच करें ताकि सही मार्गदर्शन मिल सके?'
-          : 'I hear you with complete empathy. Your emotions are valid and deserve care. Would you like us to proceed with a 2-minute clinical screening to help chart your next steps?';
+    try {
+      if (!chatSessionRef.current) {
+        const session = await api.createChatSession('Nurse Ananya check-in');
+        chatSessionRef.current = session.chat_session_id;
       }
+      const data = await api.sendChatMessage(
+        chatSessionRef.current,
+        text,
+        languageNames[selectedLanguage] || 'English'
+      );
+      replyText = data.reply;
+    } catch {
+      replyText = localReply(text);
+    }
 
-      msgIdCounter.current += 1;
-      const assistantMsg = {
-        id: msgIdCounter.current,
-        sender: 'assistant',
-        text: replyText,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
+    msgIdCounter.current += 1;
+    const assistantMsg = {
+      id: msgIdCounter.current,
+      sender: 'assistant',
+      text: replyText,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
 
-      setMessages(prev => [...prev, assistantMsg]);
-      speakResponse(replyText);
-    }, 1100);
+    setMessages(prev => [...prev, assistantMsg]);
+    setAvatarState('idle');
+    speakResponse(replyText);
   };
 
   const quickPrompts = selectedLanguage === 'hi' ? [
