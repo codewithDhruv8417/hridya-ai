@@ -1,0 +1,18 @@
+INFO:     Started server process [18916]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:62065 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62066 - "GET /therapists HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62067 - "POST /auth/register HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62070 - "POST /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62071 - "POST /auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:62072 - "POST /screening/submit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62073 - "POST /chat/message HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62074 - "POST /appointments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55121 - "OPTIONS /screening/submit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55121 - "POST /screening/submit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64208 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64730 - "OPTIONS /screening/submit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64730 - "POST /screening/submit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64957 - "POST /screening/submit HTTP/1.1" 200 OK

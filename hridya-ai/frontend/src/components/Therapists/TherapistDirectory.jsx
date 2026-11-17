@@ -6,8 +6,9 @@ import {
   CloseIcon,
   ArrowRightIcon 
 } from '../Icons';
+import { api } from '../../api';
 
-export default function TherapistDirectory() {
+export default function TherapistDirectory({ currentUser, onOpenAuth }) {
   const [activeFilter, setActiveFilter] = useState('all');
   const [bookingTherapist, setBookingTherapist] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState('Today, 4:00 PM');
@@ -72,12 +73,29 @@ export default function TherapistDirectory() {
     ? therapists
     : therapists.filter(t => t.category === activeFilter);
 
-  const handleConfirmBooking = () => {
-    setBookingConfirmed(true);
-    setTimeout(() => {
-      setBookingConfirmed(false);
+  const handleConfirmBooking = async () => {
+    if (!currentUser) {
       setBookingTherapist(null);
-    }, 1800);
+      onOpenAuth('login-patient');
+      return;
+    }
+    try {
+      // Booking is saved in the backend, then we show the confirmation
+      await api('/appointments', 'POST', {
+        user_id: currentUser.id,
+        therapist_id: bookingTherapist.id,
+        therapist_name: bookingTherapist.name,
+        slot: selectedSlot,
+        share_screening: consentIntake
+      });
+      setBookingConfirmed(true);
+      setTimeout(() => {
+        setBookingConfirmed(false);
+        setBookingTherapist(null);
+      }, 1800);
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   return (
