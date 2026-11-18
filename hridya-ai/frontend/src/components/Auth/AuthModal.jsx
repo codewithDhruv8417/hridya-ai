@@ -8,6 +8,7 @@ import {
   ArrowLeftIcon,
   ShieldCheckIcon 
 } from '../Icons';
+import { api } from '../../api';
 
 export default function AuthModal({ isOpen, onClose, initialView = 'choice', onLoginSuccess }) {
   // Views: 'choice', 'login-patient', 'login-therapist', 'register', 'forgot'
@@ -43,26 +44,26 @@ export default function AuthModal({ isOpen, onClose, initialView = 'choice', onL
     }
   };
 
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
     if (!mobileNumber || !password) {
       setFeedback({ type: 'error', message: 'कृपया मोबाइल नंबर और पासवर्ड दर्ज करें।' });
       return;
     }
-    // Mock successful login
-    const user = {
-      name: role === 'therapist' ? 'डॉ. अनन्या शर्मा' : 'अदिति वर्मा',
-      mobile: mobileNumber,
-      role: role
-    };
-    setFeedback({ type: 'success', message: 'लॉगिन सफल रहा! Welcome back to Hridaya.' });
-    setTimeout(() => {
-      onLoginSuccess(user);
-      onClose();
-    }, 600);
+    // Real login from the backend - we get back id, name and role
+    try {
+      const user = await api('/auth/login', 'POST', { mobile: mobileNumber, password });
+      setFeedback({ type: 'success', message: 'लॉगिन सफल रहा! Welcome back to Hridaya.' });
+      setTimeout(() => {
+        onLoginSuccess(user);
+        onClose();
+      }, 600);
+    } catch (err) {
+      setFeedback({ type: 'error', message: err.message });
+    }
   };
 
-  const handleRegisterSubmit = (e) => {
+  const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     if (!fullName || !mobileNumber || !password || !confirmPassword) {
       setFeedback({ type: 'error', message: 'Please fill in all required fields.' });
@@ -72,18 +73,23 @@ export default function AuthModal({ isOpen, onClose, initialView = 'choice', onL
       setFeedback({ type: 'error', message: 'Passwords do not match.' });
       return;
     }
-    // Mock successful registration
-    const user = {
-      name: fullName,
-      mobile: mobileNumber,
-      role: role,
-      license: role === 'therapist' ? licenseNumber : null
-    };
-    setFeedback({ type: 'success', message: 'Account created successfully! Welcome to Hridaya.' });
-    setTimeout(() => {
-      onLoginSuccess(user);
-      onClose();
-    }, 600);
+    // Creating the new account in the backend
+    try {
+      const user = await api('/auth/register', 'POST', {
+        name: fullName,
+        mobile: mobileNumber,
+        password,
+        role,
+        license_no: role === 'therapist' ? licenseNumber : null
+      });
+      setFeedback({ type: 'success', message: 'Account created successfully! Welcome to Hridaya.' });
+      setTimeout(() => {
+        onLoginSuccess(user);
+        onClose();
+      }, 600);
+    } catch (err) {
+      setFeedback({ type: 'error', message: err.message });
+    }
   };
 
   const handleForgotSubmit = (e) => {

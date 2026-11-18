@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import ScreeningResult from './ScreeningResult';
 import { ArrowLeftIcon, ShieldCheckIcon } from '../Icons';
+import { api } from '../../api';
 
 export default function ScreeningFlow({ onNavigateToAssistant, onNavigateToTherapists }) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [isCompleted, setIsCompleted] = useState(false);
+  const [result, setResult] = useState(null);
 
   // 5 standardized, sensitive screening questions (PHQ-9 & GAD-7 grounded)
   const questions = [
@@ -83,6 +85,13 @@ export default function ScreeningFlow({ onNavigateToAssistant, onNavigateToThera
         setCurrentQuestionIndex(prev => prev + 1);
       }, 250);
     } else {
+      // Sending the answers to the backend, it calculates the score
+      api('/screening/submit', 'POST', { answers: Object.values(updated) })
+        .then((res) => setResult(res))
+        .catch(() => {
+          const total = Object.values(updated).reduce((a, b) => a + b, 0);
+          setResult({ total_score: total, wellness_score: Math.max(10, Math.round((1 - total / 15) * 100)) });
+        });
       setTimeout(() => {
         setIsCompleted(true);
       }, 350);
@@ -99,15 +108,14 @@ export default function ScreeningFlow({ onNavigateToAssistant, onNavigateToThera
     setAnswers({});
     setCurrentQuestionIndex(0);
     setIsCompleted(false);
+    setResult(null);
   };
 
   // If completed, show Result view
-  if (isCompleted) {
-    // Total raw score from 0 to 15
-    const totalScore = Object.values(answers).reduce((acc, curr) => acc + curr, 0);
+  if (isCompleted && result) {
     return (
       <ScreeningResult
-        totalScore={totalScore}
+        totalScore={result.total_score}
         maxScore={questions.length * 3}
         onRestart={handleRestart}
         onNavigateToAssistant={onNavigateToAssistant}

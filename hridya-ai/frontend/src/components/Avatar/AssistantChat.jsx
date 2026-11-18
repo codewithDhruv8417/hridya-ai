@@ -11,6 +11,7 @@ import {
   HeartPulseIcon,
   ShieldCheckIcon 
 } from '../Icons';
+import { api } from '../../api';
 
 export default function AssistantChat({ onNavigateToScreening, onNavigateToTherapists }) {
   const [selectedLanguage, setSelectedLanguage] = useState('hi'); // 'hi' | 'en' | 'bn' | 'mr' | 'ta'
@@ -204,37 +205,29 @@ export default function AssistantChat({ onNavigateToScreening, onNavigateToThera
     setInputText('');
     setAvatarState('thinking');
 
-    // Simulate AI response formulated by empathetic assistant
-    setTimeout(() => {
-      let replyText;
-      const isHindi = selectedLanguage === 'hi';
-
-      const lower = text.toLowerCase();
-      if (lower.includes('neend') || lower.includes('sleep') || lower.includes('नींद')) {
-        replyText = isHindi
-          ? 'नींद की कमी मन और मस्तिष्क को और अधिक थका देती है। क्या आप 4-7-8 शांत सांस लेने की तकनीक आजमाना चाहेंगे, या हम एक छोटा तनाव मूल्यांकन करें?'
-          : 'Disrupted sleep directly amplifies emotional fatigue. Would you like to try a calming 4-7-8 breathing exercise together, or conduct a brief stress screening?';
-      } else if (lower.includes('exam') || lower.includes('pariksha') || lower.includes('परीक्षा') || lower.includes('future') || lower.includes('चिंता')) {
-        replyText = isHindi
-          ? 'परीक्षा और भविष्य को लेकर दबाव महसूस होना स्वाभाविक है। अपनी भावनाओं को शब्दों में ढालना ही सुधार का पहला कदम है। आप हमारे 2-मिनट के कल्याण मूल्यांकन से भी अपने तनाव का स्तर समझ सकते हैं।'
-          : 'Academic and future pressures are heavy to carry alone. You have taken a courageous step by expressing this. A 2-minute screening can help clarify your stress profile.';
-      } else {
-        replyText = isHindi
-          ? 'मैं आपकी बात पूरी संवेदनशीलता से सुन रही हूँ। आपका मन जो महसूस कर रहा है, वह बहुत महत्वपूर्ण है। क्या आप चाहते हैं कि हम आपके कल्याण स्तर की जांच करें ताकि सही मार्गदर्शन मिल सके?'
-          : 'I hear you with complete empathy. Your emotions are valid and deserve care. Would you like us to proceed with a 2-minute clinical screening to help chart your next steps?';
-      }
-
-      msgIdCounter.current += 1;
-      const assistantMsg = {
-        id: msgIdCounter.current,
-        sender: 'assistant',
-        text: replyText,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-
-      setMessages(prev => [...prev, assistantMsg]);
-      speakResponse(replyText);
-    }, 1100);
+    // Sending the message to the backend, the reply comes from there
+    api('/chat/message', 'POST', { text, language: selectedLanguage })
+      .then((data) => {
+        msgIdCounter.current += 1;
+        setMessages(prev => [...prev, {
+          id: msgIdCounter.current,
+          sender: 'assistant',
+          text: data.reply,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }]);
+        setAvatarState('idle');
+        speakResponse(data.reply);
+      })
+      .catch(() => {
+        setAvatarState('idle');
+        msgIdCounter.current += 1;
+        setMessages(prev => [...prev, {
+          id: msgIdCounter.current,
+          sender: 'assistant',
+          text: 'Backend se connect nahi ho paya. Pehle server start karein: uvicorn main:app --reload',
+          timestamp: 'Just now'
+        }]);
+      });
   };
 
   const quickPrompts = selectedLanguage === 'hi' ? [
