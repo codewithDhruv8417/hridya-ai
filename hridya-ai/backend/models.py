@@ -2,7 +2,6 @@ from datetime import datetime
 from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from database import Base
 
-
 # Users table - both patients and therapists, the role column tells them apart
 class User(Base):
     __tablename__ = "users"
@@ -14,7 +13,6 @@ class User(Base):
     role = Column(String, default="patient")
     license_no = Column(String, nullable=True)
 
-
 # The final screening score is saved here
 class Screening(Base):
     __tablename__ = "screenings"
@@ -25,7 +23,6 @@ class Screening(Base):
     wellness_score = Column(Integer)
     severity = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
-
 
 # Chat history with Nurse Ananya
 class ChatMessage(Base):
