@@ -81,7 +81,7 @@ export default function TherapistDirectory({ currentUser, onOpenAuth }) {
     }
     try {
       // Booking is saved in the backend, then we show the confirmation
-      await api('/appointments', 'POST', {
+      await api('/api/bookings', 'POST', {
         user_id: currentUser.id,
         therapist_id: bookingTherapist.id,
         therapist_name: bookingTherapist.name,

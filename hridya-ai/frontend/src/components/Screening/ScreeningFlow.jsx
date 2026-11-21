@@ -86,7 +86,7 @@ export default function ScreeningFlow({ onNavigateToAssistant, onNavigateToThera
       }, 250);
     } else {
       // Sending the answers to the backend, it calculates the score
-      api('/screening/submit', 'POST', { answers: Object.values(updated) })
+      api('/api/screening/submit', 'POST', { answers: Object.values(updated) })
         .then((res) => setResult(res))
         .catch(() => {
           const total = Object.values(updated).reduce((a, b) => a + b, 0);

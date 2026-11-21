@@ -268,3 +268,27 @@ def create_booking(payload: BookingRequest):
         raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+    USERS: dict[str, dict] = {}
+
+@app.post("/auth/register")
+def register(payload: dict):
+    mobile = str(payload.get("mobile", "")).strip()
+    if not mobile:
+        raise HTTPException(status_code=400, detail="Mobile number is required")
+    USERS[mobile] = {
+        "id": len(USERS) + 1,
+        "name": payload.get("name", "Student"),
+        "mobile": mobile,
+        "password": payload.get("password", ""),
+    }
+    return USERS[mobile]
+
+@app.post("/auth/login")
+def login(payload: dict):
+    mobile = str(payload.get("mobile", "")).strip()
+    user = USERS.get(mobile)
+    if not user:
+        # Auto-create demo user if not registered yet so live demo never blocks
+        user = {"id": len(USERS) + 1, "name": "Demo User", "mobile": mobile}
+        USERS[mobile] = user
+    return user

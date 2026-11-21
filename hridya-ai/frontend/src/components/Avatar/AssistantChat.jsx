@@ -206,7 +206,7 @@ export default function AssistantChat({ onNavigateToScreening, onNavigateToThera
     setAvatarState('thinking');
 
     // Sending the message to the backend, the reply comes from there
-    api('/chat/message', 'POST', { text, language: selectedLanguage })
+    api('/api/chat', 'POST', { message: text, language: selectedLanguage })
       .then((data) => {
         msgIdCounter.current += 1;
         setMessages(prev => [...prev, {
