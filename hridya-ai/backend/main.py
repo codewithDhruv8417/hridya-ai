@@ -1,3 +1,6 @@
+from pathlib import Path
+import joblib
+import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -9,18 +12,59 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-)# Creates the FastAPI app and enables CORS so the frontend on another port can call this API.
+)  # Creates the FastAPI app and enables CORS so the frontend on another port can call this API.
+
+# Load XGBoost screening model once at startup from hridya-ai/ml/models/
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+MODEL_PATH = PROJECT_ROOT / "ml" / "models" / "hridya_screening_model.joblib"
+
+try:
+    ml_model = joblib.load(MODEL_PATH)
+except Exception as e:
+    ml_model = None
+    print(f"Failed to load ML model from {MODEL_PATH}: {e}")
+
 
 class ChatRequest(BaseModel):
     message: str
     language: str = "hi"
+
+
 class ScreeningRequest(BaseModel):
     answers: list[int]
+
+
+class MLScreeningIn(BaseModel):
+    family_history: int              # Family History of Mental Illness (0 or 1)
+    work_study_hours: float          # Work/Study Hours
+    academic_pressure: float         # Academic Pressure (0-5)
+    dietary_habits: int              # Dietary Habits (encoded number)
+    work_pressure: float             # Work Pressure (0-5)
+    sleep_duration: float            # Sleep Duration (encoded or hours)
+    financial_stress: float          # Financial Stress (1-5)
+    study_satisfaction: float        # Study Satisfaction (0-5)
+    cgpa: float                      # CGPA
+    job_satisfaction: float          # Job Satisfaction (0-5)
+    gender: int                      # Gender (encoded number)
+    working_or_student: int          # Working Professional or Student (0 or 1)
+    age: float                       # Age
+    city: int                        # City (encoded number)
+    profession: int                  # Profession (encoded number)
+    suicidal_thoughts: int           # Have you ever had suicidal thoughts ? (0 or 1)
+    degree: int                      # Degree (encoded number)
+
+
+class MLScreeningOut(BaseModel):
+    prediction: int
+    risk_probability: float
+    severity: str
+
 
 class BookingRequest(BaseModel):
     therapist_id: int
     slot: str
     share_screening: bool = False
+
 
 CRISIS_WORDS = [
     "suicide", "kill myself", "end my life", "self harm",
@@ -41,9 +85,16 @@ CHAT_REPLIES = {
     },
 }
 
+
+@app.get("/")
+def root():
+    return {"message": "Hridaya AI API is running. Visit /docs for interactive API documentation."}
+
+
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "ml_model_loaded": ml_model is not None}
+
 
 SLEEP_WORDS = ["neend", "sleep", "insomnia", "नींद"]
 EXAM_WORDS = ["exam", "pariksha", "परीक्षा", "future", "anxiety", "चिंता"]
@@ -95,6 +146,49 @@ def submit_screening(data: ScreeningRequest):
     }
 
 
+@app.post("/api/screening/predict", response_model=MLScreeningOut)
+def predict_ml_screening(data: MLScreeningIn):
+    if ml_model is None:
+        raise HTTPException(status_code=500, detail="ML model is not loaded.")
+
+    row = {
+        "Family History of Mental Illness": data.family_history,
+        "Work/Study Hours": data.work_study_hours,
+        "Academic Pressure": data.academic_pressure,
+        "Dietary Habits": data.dietary_habits,
+        "Work Pressure": data.work_pressure,
+        "Sleep Duration": data.sleep_duration,
+        "Financial Stress": data.financial_stress,
+        "Study Satisfaction": data.study_satisfaction,
+        "CGPA": data.cgpa,
+        "Job Satisfaction": data.job_satisfaction,
+        "Gender": data.gender,
+        "Working Professional or Student": data.working_or_student,
+        "Age": data.age,
+        "City": data.city,
+        "Profession": data.profession,
+        "Have you ever had suicidal thoughts ?": data.suicidal_thoughts,
+        "Degree": data.degree,
+    }
+    input_df = pd.DataFrame([row])
+
+    pred = int(ml_model.predict(input_df)[0])
+    prob = float(ml_model.predict_proba(input_df)[0][1])
+
+    if prob >= 0.70:
+        severity = "Elevated Strain (Support Needed)"
+    elif prob >= 0.40:
+        severity = "Moderate Stress Indication"
+    else:
+        severity = "Minimal to Mild Strain"
+
+    return {
+        "prediction": pred,
+        "risk_probability": round(prob, 4),
+        "severity": severity,
+    }
+
+
 THERAPISTS = [
     {
         "id": 1,
@@ -139,6 +233,8 @@ THERAPISTS = [
         "next_slot": "Available Thursday, 2:00 PM",
     },
 ]
+
+
 @app.get("/api/therapists")
 def list_therapists(category: str = "all"):
     try:
@@ -150,6 +246,7 @@ def list_therapists(category: str = "all"):
 
 
 BOOKINGS: list[dict] = []
+
 
 @app.post("/api/bookings")
 def create_booking(payload: BookingRequest):
@@ -171,4 +268,3 @@ def create_booking(payload: BookingRequest):
         raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
-
